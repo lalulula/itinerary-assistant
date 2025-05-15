@@ -25,3 +25,34 @@ extract_keywords_prompt: |
 
   Be concise and friendly in your questions. Don’t repeat the same prompt twice.
 
+activity_prompt: |
+  You are a travel assistant that will help me plan my {{companion}} trip to {{location}}. 
+  Provide a list of activities and places to visit based on these interests: {{interest}}.
+  The trip will be {{activity_type}}.
+  For each activity, include:
+  - Name
+  - Description
+  - Link
+  - Duration
+  - Cost
+
+itinerary_prompt: |
+  Based on the following trip details:
+  - Destination: {{location}}
+  - Duration: {{duration}}
+  - Companion: {{companion}}
+  - Budget: {{budget}}
+  - Interests: {{interest}}
+  - Activity preference: {{activity_type}}
+
+  Activities:
+  {{activities}}
+
+  Food Spots:
+  {{food_text}}
+
+  Now generate a full daily itinerary that fits the budget and duration. Include:
+  - Daily breakdown (Day 1, Day 2...)
+  - Activity names and times
+  - Food spots
+  - Estimated daily cost

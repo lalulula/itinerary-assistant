@@ -3,19 +3,19 @@ from dotenv import load_dotenv
 import yaml
 import chainlit as cl
 from openai import AzureOpenAI
-import re
+from tavily import TavilyClient
+from questions import *
 
 
 load_dotenv()
 
-QUESTIONS = [
-    {"key": "location", "text": "1. Which location are you planning to travel to?"},
-    {"key": "duration", "text": "2. How long is your trip? (e.g., 5 days, 1 week)"},
-    {"key": "companion", "text": "3. Who will be coming with you? (e.g., solo, partner, friends, family)"},
-    {"key": "active", "text": "4. Do you want an active trip or a relaxed one? (Type: active / relaxed)"},
-    {"key": "budget", "text": "5. What's your budget level? (e.g., luxury, mid-range, budget) — or you can skip this."},
-    {"key": "interest", "text": "6. Do you have any specific interests or themes? (e.g., food, culture, beach, hiking)"},
-]
+client = AzureOpenAI(
+    api_key=os.environ["AZURE_OPENAI_API_KEY"],
+    azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+    api_version=os.environ["OPENAI_API_VERSION"],
+)
+
+tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
 
 @cl.on_chat_start
 async def on_chat_start():
@@ -29,6 +29,8 @@ with open('prompts.yaml', 'r') as file:
       prompts = yaml.safe_load(file)
 # Access prompts
 extract_keywords_prompt = prompts['extract_keywords_prompt']
+activity_prompt= prompts['activity_prompt']
+itinerary_prompt= prompts['itinerary_prompt']
 
 
 @cl.on_message
@@ -39,8 +41,9 @@ async def on_message(msg: cl.Message):
 
     if index == len(QUESTIONS):
         if user_input.lower() in ["no", "nope", "nothing", "that's all", "nah"]:
-            bullet_list = "\n".join([f"- **{k.capitalize()}**: {v}" for k, v in trip_data.items()])
-            await cl.Message(content=f"Great! Here's the information you've shared:\n\n{bullet_list}").send()
+            await generate_itinerary(trip_data)
+            # bullet_list = "\n".join([f"- **{k.capitalize()}**: {v}" for k, v in trip_data.items()])
+            # await cl.Message(content=f"Great! Here's the information you've shared:\n\n{bullet_list}").send()
             return
         else:
             # Save extra info
@@ -72,3 +75,43 @@ async def on_message(msg: cl.Message):
         await cl.Message(content=QUESTIONS[index + 1]["text"]).send()
     else:
         await cl.Message(content="Would you like to add anything else before I generate your itinerary?").send()
+
+
+
+async def generate_itinerary(trip_data):
+    # Format activity prompt
+    activity_prompt = prompts["activity_prompt"]
+    activity_filled = activity_prompt \
+        .replace("{{companion}}", trip_data["companion"]) \
+        .replace("{{location}}", trip_data["location"]) \
+        .replace("{{interest}}", trip_data["interest"]) \
+        .replace("{{activity_type}}", "active" if trip_data["active"] else "relaxed")
+
+    activity_response = client.chat.completions.create(
+        model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
+        messages=[{"role": "system", "content": activity_filled}]
+    )
+    activities = activity_response.choices[0].message.content
+
+    # Get food spots via Tavily
+    food_results = tavily.search(query=f"Good food places in {trip_data['location']}", max_results=5)
+    food_text = "\n".join([f"- [{r['title']}]({r['url']})" for r in food_results['results']])
+
+    # Format final itinerary prompt
+    final_prompt = prompts["itinerary_prompt"] \
+        .replace("{{location}}", trip_data["location"]) \
+        .replace("{{duration}}", trip_data["duration"]) \
+        .replace("{{companion}}", trip_data["companion"]) \
+        .replace("{{budget}}", trip_data["budget"] or "not specified") \
+        .replace("{{interest}}", trip_data["interest"]) \
+        .replace("{{activity_type}}", "active" if trip_data["active"] else "relaxed") \
+        .replace("{{activities}}", activities) \
+        .replace("{{food_text}}", food_text)
+
+    itinerary_response = client.chat.completions.create(
+        model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
+        messages=[{"role": "system", "content": final_prompt}]
+    )
+
+    itinerary = itinerary_response.choices[0].message.content.strip()
+    await cl.Message(content="Here's your personalized itinerary:\n\n" + itinerary).send()
