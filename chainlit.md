@@ -1,16 +1,14 @@
-# Welcome to Chainlit! 🚀🤖
+# 🌍 Welcome to the Chainlit Travel Planner! ✈️
 
-Hi there, Developer! 👋 We're excited to have you on board. Chainlit is a powerful tool designed to help you prototype, debug and share applications built on top of LLMs.
+Ready to build your perfect itinerary? I'm here to help you plan a personalized and memorable trip.  
+Just share a few quick details to get started — or dive right in if you already have a destination in mind!
 
-## Useful Links 🔗
+Here are some things you can tell me:
+- **Who** you’re traveling with (solo, partner, family, friends)
+- **Where** you’d like to go
+- **How long** you plan to stay or your travel dates
+- **What kind of activities** you’re interested in (e.g., food, culture, beach, hiking, nightlife)
 
-- **Documentation:** Get started with our comprehensive [Chainlit Documentation](https://docs.chainlit.io) 📚
-- **Discord Community:** Join our friendly [Chainlit Discord](https://discord.gg/k73SQ3FyUh) to ask questions, share your projects, and connect with other developers! 💬
+The more you share, the better your itinerary will be!
 
-We can't wait to see what you create with Chainlit! Happy coding! 💻😊
-
-## Welcome screen
-
-To modify the welcome screen, edit the `chainlit.md` file at the root of your project. If you do not want a welcome screen, just leave this file empty.
-
-
+🧭 Let’s get started whenever you’re ready.
