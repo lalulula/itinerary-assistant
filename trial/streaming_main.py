@@ -17,6 +17,31 @@ with open('prompts.yaml', 'r') as file:
 extract_keywords_prompt = prompts['extract_keywords_prompt']
 
 
+@cl.set_starters
+async def set_starters():
+      return [
+            cl.Starter(
+                  label='Exotic places',
+                  message='I want to visit exotic places',
+                  icon='/public/exotic.svg'
+            ),
+            cl.Starter(
+                  label='Places to travel alone',
+                  message='Create an itinerary for a solo trip',
+                  icon='/public/alone.svg'
+            ),
+            cl.Starter(
+                  label='Family trip',
+                  message='Create an itinerary for a family trip.',
+                  icon='/public/family.svg'
+            ),
+            cl.Starter(
+                  label='Walking trip',
+                  message='Create an itinerary for a walking trip. By walking trip I mean a trip where the only transport is your feet.',
+                  icon='/public/by_foot.svg'
+            )
+      ]
+
 
 @cl.step(type='tool')
 async def dummy_tool():

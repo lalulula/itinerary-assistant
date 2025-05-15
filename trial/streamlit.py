@@ -1,4 +1,4 @@
-import streamlit as st
+import trial.streamlit as st
 from dotenv import load_dotenv
 from typing import TypedDict, Annotated, List
 from langgraph.graph import StateGraph, END

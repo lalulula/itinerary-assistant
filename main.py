@@ -4,6 +4,8 @@ import yaml
 import chainlit as cl
 from openai import AzureOpenAI
 load_dotenv()
+import re
+
 
 client = AzureOpenAI(
     api_key=os.environ["AZURE_OPENAI_API_KEY"],
@@ -11,58 +13,55 @@ client = AzureOpenAI(
     api_version=os.environ["OPENAI_API_VERSION"],
 )
 
+welcome_message = """Welcome to the Chainlit Travel Planner! 🌍✈️
+
+To help you build the perfect itinerary, I’ll ask a few quick questions about your trip. You can also tell me directly if you already have something in mind.
+
+Just share whatever you know — things like:
+- Who you’re traveling with
+- Where you’d like to go
+- How long you plan to stay
+- What kind of experiences or activities you’re interested in
+
+Let’s get started whenever you’re ready!
+"""
+
+
 
 @cl.on_chat_start
-def on_chat_start():
-      print("New chat started. How can I help you today?")
-      cl.user_session.set("message_history", [{"role":"system","content":"You are a helpful assistant specialized in travel planning. You will be given a user's request and you will need to extract the keywords from the request."}])
+async def on_chat_start():
+      cl.user_session.set("message_history", [])
+      await cl.Message(content=welcome_message).send()
 with open('prompts.yaml', 'r') as file:
       prompts = yaml.safe_load(file)
 # Access prompts
 extract_keywords_prompt = prompts['extract_keywords_prompt']
 
-@cl.set_starters
-async def set_starters():
-      return [
-            cl.Starter(
-                  label='Exotic places',
-                  message='I want to visit exotic places',
-                  icon='/public/exotic.svg'
-            ),
-            cl.Starter(
-                  label='Places to travel alone',
-                  message='Create an itinerary for a solo trip',
-                  icon='/public/alone.svg'
-            ),
-            cl.Starter(
-                  label='Family trip',
-                  message='Create an itinerary for a family trip.',
-                  icon='/public/family.svg'
-            ),
-            cl.Starter(
-                  label='Walking trip',
-                  message='Create an itinerary for a walking trip. By walking trip I mean a trip where the only transport is your feet.',
-                  icon='/public/by_foot.svg'
-            )
-      ]
-
-
-@cl.step(type='tool')
-async def dummy_tool():
-      await cl.sleep(2)
-      return 'Then will return a response after 2 seconds'
 
 @cl.on_message
 async def on_message(msg: cl.Message):
-    full_prompt = f'{extract_keywords_prompt}\nInput: "{msg.content}"\nOutput:'
+    history = cl.user_session.get("message_history") or []
+    history.append({"role": "user", "content": msg.content})
 
     response = client.chat.completions.create(
         model=os.environ["AZURE_OPENAI_DEPLOYMENT"],
-        messages=[{"role": "user", "content": full_prompt}],
+        messages=[
+            {"role": "system", "content": extract_keywords_prompt},
+            *history
+        ],
     )
 
-    reply = response.choices[0].message.content
+    assistant_reply = response.choices[0].message.content.strip()
+    history.append({"role": "assistant", "content": assistant_reply})
 
-    await cl.Message(content=reply).send()
+    cl.user_session.set("message_history", history)
+    match = re.search(r"Here are the keywords I gathered:\s*(.*)", assistant_reply, re.DOTALL)
+    if match:
+      raw_keywords = match.group(1).strip()
 
+      # Support newline, bullet points, or commas
+      keyword_list = re.split(r'[\n•,]+', raw_keywords)
+      keyword_list = [kw.strip() for kw in keyword_list if kw.strip()]
+      print(f"[✅ Keywords Extracted]: {keyword_list}")
 
+    await cl.Message(content=assistant_reply).send()
